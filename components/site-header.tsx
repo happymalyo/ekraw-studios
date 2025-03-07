@@ -12,8 +12,8 @@ import useScroll from "@/hooks/use-scroll";
 
 const Header = () => {
   const src: any = useImageTheme({
-    darkName: "/logo-mekan.png",
-    lightName: "/logo-mekan.png",
+    darkName: "/dark-mode.png",
+    lightName: "/ekraw-light.jpeg",
   });
   const scrolled = useScroll(5);
   const containerRef = useRef(null);
@@ -24,26 +24,39 @@ const Header = () => {
       className={cn(
         "sticky inset-x-0 top-0 z-30 w-full transition-all mt-[20px]",
         {
-          "bg-background/75 backdrop-blur-lg py-[20px]": scrolled,
+          "backdrop-blur-lg py-[10px]": scrolled,
         }
       )}
     >
-      <div className="flex w-full h-16 items-center max-w-7xl mx-auto px-2 justify-between sm:space-x-0">
+      <div className="flex w-full h-16 items-center max-w-7xl  mx-auto justify-between sm:space-x-0">
         <div>
-          <Image src={src} alt="Mëkan logo" width={160} height={40} />
+          <Image
+            src={src}
+            className={cn("pt-5 pl-7 transition-all duration-300", {
+              "rounded-r-full pt-0 w-[90px]": scrolled, // Curves only the right side
+            })}
+            alt="Mëkan logo"
+            width={120}
+            height={40}
+          />
         </div>
         <div className="flex justify-end items-center space-x-4">
           <Navbar />
-          <nav className="hidden lg:block flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center space-x-4">
             <Button
               asChild
-              className="dark:bg-secondary/20 dark:text-secondary-foreground"
+              className={cn(
+                "bg-primary text-primary-foreground hover:bg-[#d1254e] transition-all duration-300",
+                "dark:bg-primary dark:text-primary-foreground dark:hover:bg-[#d1254e]"
+              )}
             >
               <Link href="/">New Project</Link>
             </Button>
+            <button className="text-foreground hover:text-primary transition-colors">
+              EN
+            </button>
+            <ThemeToggle className="text-foreground hover:text-primary" />
           </nav>
-          <button className="hidden lg:block">EN</button>
-          <ThemeToggle className="hidden lg:block" />
         </div>
       </div>
     </div>
