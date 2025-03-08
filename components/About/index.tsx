@@ -1,25 +1,18 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import ReactLenis from "lenis/react";
-import Link from "next/link";
 import { AboutStyles } from "./style";
 import Image from "next/image";
+import AboutReveal from "./AboutReveal";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function About() {
   useEffect(() => {
-    const scrollTriggerSettings = {
-      trigger: ".main",
-      start: "top 25%",
-      toggleActions: "play reverse play reverse",
-    };
-
-    const leftXValues = [-1400, -1600, -600]; // Your example
-    const rightXValues = [1400, 1600, 600]; // Mirrored for symmetry
+    const leftXValues = [-1700, -1800, -800]; // Your example
+    const rightXValues = [1700, 1800, 800]; // Mirrored for symmetry
     const leftRotationValues = [-50, -45, -120]; // Larger rotations
     const rightRotationValues = [50, 45, 120]; // Mirrored rotations
     const yValues = [200, -300, -1000];
@@ -81,6 +74,7 @@ export default function About() {
         pin: true,
       },
     });
+
     return () => {
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
@@ -151,9 +145,10 @@ export default function About() {
   return (
     <div>
       <div style={AboutStyles.content} className="content">
-        <section style={AboutStyles.main} className="main">
+        <section style={AboutStyles.main} className="main z-40">
           {generateRows()}
         </section>
+        <AboutReveal />
         <section
           style={AboutStyles.cardScrollSection}
           className="card-scroll-section"
