@@ -23,10 +23,11 @@ import HeroSection from "./HeroSection";
 import WhyChooseUs from "../WhyShooseUs/WhyShooseUs";
 import ServicesSection from "../Services/Services";
 import About from "../About";
+import ReactLenis from "lenis/react";
 
 export const Home = () => {
   return (
-    <>
+    <ReactLenis root>
       <section className="main">
         <HeroSection />
         {/* <WhyChooseUs /> */}
@@ -109,6 +110,6 @@ export const Home = () => {
         <ChatBot />
         <ScrollToTop />
       </section>
-    </>
+    </ReactLenis>
   );
 };

@@ -2,6 +2,7 @@
 export const AboutStyles = {
   content: {
     overflow: "hidden",
+    position: "relative",
   },
 
   section: {
@@ -25,6 +26,7 @@ export const AboutStyles = {
     flexDirection: "column",
     overflow: "hidden",
     marginTop: "20px",
+    position: "relative",
   },
 
   row: {
@@ -153,10 +155,7 @@ export const AboutStyles = {
     padding: "50px",
   },
 
-  "ekraw img": {
-    width: "25vw",
-    height: "60vh",
-    objectFit: "fill",
-    borderRadius: "20px",
+  reveal: {
+    transform: "translateY(30px)",
   },
 } as const;

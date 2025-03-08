@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const Advantages = () => {
   return (
-    <div className="advantages bg-gray-900 p-10 z-20">
+    <div className="advantages bg-background p-10 z-20">
       <div className="space-y-10">
         <div className="flex flex-row py-0 md:gap-5 gap-2">
           <div className="bg-secondary/20 rounded-sm p-1 sm:w-9 w-[80px] h-9 md:w-12 md:h-12  mt-1">
@@ -22,8 +22,8 @@ const Advantages = () => {
               Cost Savings
             </h3>
             <p className="flex text-left text-sm sm:text-base text-balance">
-              Mëkan Services takes charge of your IT projects, reducing
-              your costs while guaranteeing a better ROI.
+              Mëkan Services takes charge of your IT projects, reducing your
+              costs while guaranteeing a better ROI.
             </p>
           </div>
         </div>
