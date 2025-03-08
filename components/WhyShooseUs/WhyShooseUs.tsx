@@ -24,7 +24,7 @@ const WhyChooseUs = () => {
             </h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-4">
               Nous utilisons les dernières technologies pour vous offrir des
-              solutions à la pointe de l'innovation.
+              solutions à la pointe de l&apos;innovation.
             </p>
             <div className="flex justify-center">
               <Image
@@ -53,8 +53,8 @@ const WhyChooseUs = () => {
               Expertise Technique
             </h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-4">
-              Notre équipe d'experts maîtrise les technologies les plus récentes
-              pour répondre à vos besoins.
+              Notre équipe d&apos;experts maîtrise les technologies les plus
+              récentes pour répondre à vos besoins.
             </p>
             <div className="flex justify-center">
               <Image

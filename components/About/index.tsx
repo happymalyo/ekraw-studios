@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import ReactLenis from "lenis/react";
 import Link from "next/link";
 import { AboutStyles } from "./style";
+import Image from "next/image";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -27,7 +28,7 @@ export default function About() {
     gsap.utils.toArray<HTMLElement>(".row").forEach((row, index) => {
       const cardLeft = row.querySelector<HTMLElement>(".card-left");
       const cardRight = row.querySelector<HTMLElement>(".card-right");
-      const start = row.querySelector<HTMLElement>(".ekraw");
+      const start = row.querySelector<HTMLElement>(".content");
 
       if (cardLeft) {
         gsap.fromTo(
@@ -62,30 +63,6 @@ export default function About() {
       }
     });
 
-    gsap.to(".logo", {
-      scale: 1,
-      duration: 0.5,
-      ease: "power2.inOut",
-      scrollTrigger: scrollTriggerSettings,
-    });
-
-    gsap.to(".line p", {
-      y: 0,
-      stagger: 0.1,
-      duration: 0.5,
-      ease: "power2.inOut",
-      scrollTrigger: scrollTriggerSettings,
-    });
-
-    gsap.to("button", {
-      y: 0,
-      opacity: 1,
-      delay: 0.25,
-      duration: 0.5,
-      ease: "power2.inOut",
-      scrollTrigger: scrollTriggerSettings,
-    });
-
     // Horizontal scroll cards
     const scrollCards = gsap.utils.toArray<HTMLElement>(".scroll-card");
     const totalWidth = scrollCards.reduce(
@@ -104,19 +81,6 @@ export default function About() {
         pin: true,
       },
     });
-
-    gsap.to(".bar", {
-      delay: 3.5,
-      height: 0,
-      stagger: { amount: 0.5 },
-      ease: "power4.inOut",
-    });
-
-    gsap.to(".ekraw", {
-      delay: 2,
-      opacity: 0,
-    });
-
     return () => {
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
@@ -128,17 +92,31 @@ export default function About() {
       rows.push(
         <div key={i} className="row" style={AboutStyles.row}>
           <div className="card card-left" style={AboutStyles.card}>
-            <img
+            <Image
               src={`/images/about/image-${2 * i - 1}.jpg`}
               alt=""
-              style={AboutStyles.img} // Apply img styles here
+              width={0} // Required for Next.js Image - set appropriate width
+              height={0} // Required for Next.js Image - set appropriate height
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+              sizes="100vw" // Optional: helps with responsive images
             />
           </div>
           <div className="card card-right" style={AboutStyles.card}>
-            <img
+            <Image
               src={`/images/about/image-${2 * i}.jpg`}
               alt=""
-              style={AboutStyles.img} // Apply img styles here
+              width={0} // Required for Next.js Image - set appropriate width
+              height={0} // Required for Next.js Image - set appropriate height
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+              sizes="100vw" // Optional: helps with responsive images
             />
           </div>
         </div>
@@ -147,29 +125,22 @@ export default function About() {
     return rows;
   };
 
-  const generateBars = () => {
-    const bars = [];
-    for (let i = 1; i < 20; i++) {
-      bars.push(
-        <div
-          key={i}
-          style={{ background: "#0D0D0D", ...AboutStyles.bar }}
-          className="bar"
-        />
-      );
-    }
-    return bars;
-  };
-
   const generateScrollCards = () => {
     const cards = [];
     for (let i = 1; i <= 14; i++) {
       cards.push(
         <div key={i} className="scroll-card" style={AboutStyles.scrollCard}>
-          <img
+          <Image
             src={`/images/about/scroll-img-${i}.jpg`}
-            alt={`Scroll Card ${i}`}
-            style={AboutStyles["scrollCard img"]}
+            alt=""
+            width={0} // Required for Next.js Image - set appropriate width
+            height={0} // Required for Next.js Image - set appropriate height
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+            sizes="100vw" // Optional: helps with responsive images
           />
         </div>
       );
@@ -179,31 +150,8 @@ export default function About() {
 
   return (
     <div>
-      <div style={AboutStyles.overlay} className="overlay">
-        {generateBars()}
-      </div>
-      <div style={AboutStyles.ekraw} className="ekraw">
-        <img src="/bg/dark-mode.png" alt="" style={AboutStyles["ekraw img"]} />
-      </div>
       <div style={AboutStyles.content} className="content">
         <section style={AboutStyles.main} className="main">
-          <div style={AboutStyles.mainContent} className="main-content">
-            <div style={AboutStyles.logo} className="logo">
-              <img src="/facebook.png" alt="facebook" style={AboutStyles.img} />
-            </div>
-            <div style={AboutStyles.copy} className="copy">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} style={AboutStyles.line} className="line">
-                  <p style={AboutStyles["line p"]}>
-                    Delve into coding without clutter.
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div style={AboutStyles.button} className="button">
-              <button style={AboutStyles.button}>Get PRO</button>
-            </div>
-          </div>
           {generateRows()}
         </section>
         <section

@@ -4,12 +4,6 @@ export const AboutStyles = {
     overflow: "hidden",
   },
 
-  img: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-
   section: {
     position: "relative",
     display: "flex",
@@ -133,12 +127,6 @@ export const AboutStyles = {
     margin: "0 2px",
     transition: "filter 0.3s ease, transform 0.3s ease",
     position: "relative",
-  },
-
-  "scrollCard img": {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
   },
 
   overlay: {
