@@ -29,14 +29,4 @@ export const navList: NavItemProps[] = [
     link: siteMap.BLOG,
     expandable: false,
   },
-  {
-    label: "Career",
-    link: siteMap.CAREER,
-    expandable: false,
-  },
-  {
-    label: "News",
-    link: siteMap.NEWS,
-    expandable: false,
-  },
 ];

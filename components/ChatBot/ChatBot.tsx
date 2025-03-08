@@ -1,142 +1,538 @@
-import React from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import "./style.css";
+import Image from "next/image";
+import { toast } from "react-toastify";
+import { FiMinus } from "react-icons/fi";
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import {
+  arrayUnion,
+  collection,
+  getDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  DocumentData,
+  where,
+  Unsubscribe,
+} from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { useUserStore } from "@/lib/userStore";
+import { useUserBot } from "@/lib/userBot";
+import { useChatStore } from "@/lib/chatStore";
+import { useLeadInfos } from "@/lib/leadInfos";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+interface MyFormProps {
+  handleSendEmail: (event: React.FormEvent<HTMLFormElement>) => void;
+  handleChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  loadingState: boolean;
+}
+
+interface MyPresetQuestionProps {
+  handlePresetQuestion: (event: React.MouseEvent<HTMLElement>) => void;
+}
 
 const ChatBot = () => {
-  return (
-    <>
-      <button
-        className="fixed bottom-4 right-4 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50 border rounded-full w-16 h-16 bg-black hover:bg-gray-700 m-0 cursor-pointer border-gray-200 bg-none p-0 normal-case leading-5 hover:text-gray-900"
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded="false"
-        data-state="closed"
-      >
-        <svg
-          xmlns=" http://www.w3.org/2000/svg"
-          width="30"
-          height="40"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          className="text-white block border-gray-200 align-middle"
-        >
-          <path
-            d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"
-            className="border-gray-200"
-          ></path>
-        </svg>
-      </button>
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [text, setText] = useState("");
+  const [chat, setChat] = useState<DocumentData | undefined>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const { currentUser, isLoading, fetchUserInfo } = useUserStore();
+  const { myBot, isBotLoading, fetchBotInfo } = useUserBot();
+  const { leadId, chatId, fetchLeadInfo } = useLeadInfos();
+  const [isVisitorCreated, setNewVisitor] = useState(false);
+  const BOT_ID = `${process.env.NEXT_PUBLIC_BOT_ID}`;
+  const [formData, setFormData] = useState({ name: "", email: "" });
+  const endRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDiplayed, setIsDisplayed] = useState(true);
 
-      <div
-        style={{
-          boxShadow: "0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgb(0 0 0 / 0.05);",
+  const callFlaskApi = async (endpoint: string, data: any) => {
+    try {
+      const response = await fetch(`http://localhost:5000/${endpoint}`, {
+        method: "POST", // ou 'GET', 'PUT', etc., selon ce que votre API attend
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Error calling Flask API: ", error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchLeadInfo?.();
+    return () => {
+      console.log("clean up");
+    };
+  }, [fetchLeadInfo]);
+
+  useEffect(() => {
+    if (endRef.current) {
+      endRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [chat?.messages, isOpen]);
+
+  useEffect(() => {
+    let unsubscribe: Unsubscribe | undefined;
+    if (chatId) {
+      const chatDocRef = doc(db, "chats", chatId);
+
+      // Subscribe to Firestore document changes
+      unsubscribe = onSnapshot(chatDocRef, (res) => {
+        setChat(res.data());
+      });
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe(); // Call the unsubscribe function
+      }
+    };
+  }, [chatId]);
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { name, email } = formData;
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, "users", `${leadId}`), {
+        email,
+        username: name,
+      });
+
+      toast.success(
+        "L'email a été envoyé avec succès. Nous allons vous contacter sous peu.😊"
+      );
+    } catch (error: any) {
+      setLoading(false);
+      toast.error(
+        "L'email n'a pas été envoyé correctement. Veuillez réessayer plus tard."
+      );
+    } finally {
+      setLoading(false);
+      const res = await fetch("/en/api/sendMessage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: process.env.NEXT_PUBLIC_TWILIO_PHONE_ADMIN as string,
+          message: `Email a été envoyé dans le chat. Voici l'information du prospect, Email : ${email}. Nom : ${name}.`,
+        }),
+      });
+    }
+  };
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setText("Traitement en cours....");
+    const data = { query: text };
+    let result = "";
+    if (text === "") return;
+
+    try {
+      await updateDoc(doc(db, "chats", `${chatId}`), {
+        messages: arrayUnion({
+          senderId: `${leadId}`,
+          text,
+          createdAt: new Date(),
+        }),
+      });
+      try {
+        result = await callFlaskApi("query", data);
+      } catch (err) {
+        result =
+          "Désolé, la connexion au bot a un problème. Veuillez réessayer plus tard ou contactez-nous.";
+        console.log(err);
+      }
+      await updateDoc(doc(db, "chats", `${chatId}`), {
+        messages: arrayUnion({
+          senderId: BOT_ID,
+          text:
+            result === ""
+              ? "Désolé, la connexion au bot a un problème. Veuillez réessayer plus tard ou contactez-nous."
+              : result,
+          createdAt: new Date(),
+        }),
+      });
+      const userIDs = [BOT_ID, `${leadId}`];
+
+      userIDs.forEach(async (id) => {
+        const userChatsRef = doc(db, "userchats", `${id}`);
+        const userChatsSnapshot = await getDoc(userChatsRef);
+
+        if (userChatsSnapshot.exists()) {
+          const userChatsData = userChatsSnapshot.data();
+
+          const chatIndex = userChatsData.chats.findIndex(
+            (c: any) => c.chatId === chatId
+          );
+
+          userChatsData.chats[chatIndex].lastMessage = result;
+          userChatsData.chats[chatIndex].isSeen = id === BOT_ID ? true : false;
+          userChatsData.chats[chatIndex].updatedAt = Date.now();
+
+          await updateDoc(userChatsRef, {
+            chats: userChatsData.chats,
+          });
+        }
+      });
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setText("");
+    }
+  };
+
+  const handlePresetQuestion = async (e: React.MouseEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement;
+    setText("Traitement en cours....");
+    const data = { query: target?.textContent };
+    let result = "";
+
+    try {
+      await updateDoc(doc(db, "chats", `${chatId}`), {
+        messages: arrayUnion({
+          senderId: leadId,
+          text: `${target?.textContent}`,
+          createdAt: new Date(),
+        }),
+      });
+
+      try {
+        result = await callFlaskApi("query", data);
+      } catch (err) {
+        result =
+          "Désolé, la connexion au bot a un problème. Veuillez réessayer plus tard ou contactez-nous.";
+        setText("");
+        console.log(err);
+      }
+      await updateDoc(doc(db, "chats", `${chatId}`), {
+        messages: arrayUnion({
+          senderId: BOT_ID,
+          text:
+            result === ""
+              ? "Désolé, la connexion au bot a un problème. Veuillez réessayer plus tard ou contactez-nous."
+              : result,
+          createdAt: new Date(),
+        }),
+      });
+
+      const userIDs = [BOT_ID, leadId];
+
+      userIDs.forEach(async (id) => {
+        const userChatsRef = doc(db, "userchats", `${id}`);
+        const userChatsSnapshot = await getDoc(userChatsRef);
+
+        if (userChatsSnapshot.exists()) {
+          const userChatsData = userChatsSnapshot.data();
+
+          const chatIndex = userChatsData.chats.findIndex(
+            (c: any) => c.chatId === chatId
+          );
+
+          userChatsData.chats[chatIndex].lastMessage = result;
+          userChatsData.chats[chatIndex].isSeen = id === BOT_ID ? true : false;
+          userChatsData.chats[chatIndex].updatedAt = Date.now();
+
+          await updateDoc(userChatsRef, {
+            chats: userChatsData.chats,
+          });
+        }
+      });
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setText("");
+    }
+  };
+
+  return (
+    <div
+      className={cn({
+        "fixed bottom-5 right-3 z-20": !isOpen,
+      })}
+    >
+      <motion.div
+        layout // Layout make the div more smooth
+        whileHover={{ scale: isOpen ? 1 : 1.2 }}
+        animate={{
+          borderRadius: isOpen ? 20 : 50,
         }}
-        className="fixed bottom-[calc(4rem+1.5rem)] right-0 mr-4 bg-white p-6 rounded-lg border border-[#e5e7eb] w-[440px] h-[634px]"
+        initial={{ borderRadius: 50 }}
+        className={cn(
+          "w-20 h-20 shadow-2xl cursor-pointer flex items-center justify-center",
+          {
+            "bot-container z-40 right-0 mr-4 text-slate-500 bg-white p-6 rounded-lg border border-[#e5e7eb] w-[440px] h-[634px] flex flex-col":
+              isOpen,
+          }
+        )}
+        onClick={() => {
+          if (!isOpen) {
+            setIsOpen(!isOpen);
+            setIsDisplayed(false);
+          }
+        }}
       >
-        <div className="flex flex-col space-y-1.5 pb-6">
-          <h2 className="font-semibold text-lg tracking-tight">Chatbot</h2>
-          <p className="text-sm text-[#6b7280] leading-3">
-            SmartPredict Service assistant
+        {isOpen && (
+          <>
+            <div className="flex flex-col w-full space-y-1.5 pb-4 border-b shadow-md border-none">
+              <div className="px-2  flex items-center justify-between">
+                <h2 className="flex font-semibold text-lg tracking-tight items-center">
+                  MËKAN à votre service
+                </h2>
+                <FiMinus
+                  className="w-8 h-8 cursor-pointer"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsDisplayed(true);
+                  }}
+                />
+              </div>
+            </div>
+            <div className="chat flex-1 w-full space-y-2 pt-5 pb-5">
+              <div className="center flex flex-row">
+                <div className="space-y-2">
+                  <Image
+                    className="item w-10 h-10 rounded-full"
+                    src={"/bot.png"}
+                    width={20}
+                    height={20}
+                    alt="Logo image"
+                  />
+                </div>
+                <motion.div
+                  className="flex flex-col gap-2 w-full"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                >
+                  <div className="flex flex-col leading-1.5 p-5 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
+                    <p className="message text-sm font-normal text-gray-900 text-balance dark:text-white">
+                      Bonjour 👋, je suis un bot de Mëkan. Je peux vous
+                      répondre instatannement.
+                    </p>
+                  </div>
+                  <PresetQuestion handlePresetQuestion={handlePresetQuestion} />
+                </motion.div>
+              </div>
+              {chat?.messages?.map((message: any, index: number) => (
+                <>
+                  <div className="center flex flex-row">
+                    {message.senderId === BOT_ID ? (
+                      <div className="space-y-2">
+                        <Image
+                          className="item w-10 h-10 rounded-full"
+                          src={"/bot.png"}
+                          width={20}
+                          height={20}
+                          alt="Logo image"
+                        />
+                      </div>
+                    ) : (
+                      <></>
+                    )}
+                    <div
+                      className="flex flex-col gap-1 w-full max-w-[280px]"
+                      style={{
+                        marginLeft: message.senderId === BOT_ID ? 0 : 80,
+                      }}
+                    >
+                      <div className="flex flex-col leading-1.5 p-5 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
+                        <p className="message text-sm font-normal text-gray-900 text-balance dark:text-white">
+                          <div
+                            dangerouslySetInnerHTML={{ __html: message.text }}
+                          />
+                        </p>
+                        {message.img && (
+                          <img
+                            className="mt-5 item w-100 h-100"
+                            src={message.img}
+                            width={100}
+                            height={100}
+                            alt="Logo image"
+                          />
+                        )}
+                      </div>
+                      {chat?.messages?.length === 4 &&
+                      index === chat?.messages?.length - 1 &&
+                      message.senderId === BOT_ID ? (
+                        <EmailForm
+                          handleSendEmail={handleSendEmail}
+                          handleChange={handleChange}
+                          loadingState={loading}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                  <div ref={endRef} />
+                </>
+              ))}
+            </div>
+            <div className="flex items-center w-full pt-0">
+              <form
+                onSubmit={handleSend}
+                className="flex items-center justify-center w-full space-x-2"
+              >
+                <input
+                  className="input h-10 text-gray-700 dark:text-gray-200 text-sm p-3 focus:outline-none bg-gray-200 dark:bg-gray-700 w-full rounded-l-md"
+                  type="text"
+                  placeholder="Ecrire un message"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  required
+                />
+
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-md text-sm font-medium text-[#f9fafb] disabled:pointer-events-none disabled:opacity-50 bg-black hover:bg-[#111827E6] h-10 px-4 py-2"
+                >
+                  Envoyer
+                </button>
+              </form>
+            </div>
+          </>
+        )}
+
+        {isDiplayed && (
+          <Image
+            className="item w-35 h-50"
+            src={"/bot.png"}
+            width={50}
+            height={20}
+            alt="Logo image"
+          />
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
+const EmailForm: React.FC<MyFormProps> = ({
+  handleSendEmail,
+  handleChange,
+  loadingState,
+}) => {
+  return (
+    <div className="gap-2">
+      <div className="flex flex-col mb-5 leading-1.5 p-5 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
+        <p className="message text-sm font-normal text-gray-900 text-balance dark:text-white">
+          Laisser nous votre contact et nous allons vous contacter quand vous n
+          êtes pas connecté
+        </p>
+      </div>
+      <form
+        className="bg-white shadow-md w-50 h-200 rounded px-8 pt-6 pb-8 mb-4"
+        onSubmit={handleSendEmail}
+      >
+        <div className="mb-4">
+          <label
+            className="text-gray-700 text-sm font-bold mb-2"
+            htmlFor="email"
+          >
+            Email
+          </label>
+          <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-300 leading-tight focus:outline-none focus:shadow-outline"
+            id="email"
+            type="email"
+            name="email"
+            placeholder="Your email"
+            onChange={handleChange}
+            autoComplete="off"
+            required
+          />
+        </div>
+        <div className="mb-6">
+          <label
+            className="text-gray-700 text-sm font-bold mb-2"
+            htmlFor="name"
+          >
+            Name
+          </label>
+          <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-300 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            id="name"
+            type="text"
+            name="name"
+            placeholder="Enter your name"
+            onChange={handleChange}
+            autoComplete="off"
+            required
+          />
+          <p className="text-secondary-500 text-xs italic">
+            Please enter your email and your name
           </p>
         </div>
-
-        <div
-          className="pr-4 h-[474px]"
-          style={{ minWidth: "100%; display: table;" }}
-        >
-          <div className="flex gap-3 my-4 text-gray-600 text-sm flex-1">
-            <span className="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
-              <div className="rounded-full bg-gray-100 border p-1">
-                <svg
-                  stroke="none"
-                  fill="black"
-                  stroke-width="1.5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  height="20"
-                  width="20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
-                  ></path>
-                </svg>
-              </div>
-            </span>
-            <p className="leading-relaxed">
-              <span className="block font-bold text-gray-700">AI </span>Hi, how
-              can I help you today?
-            </p>
-          </div>
-          <div className="flex gap-3 my-4 text-gray-600 text-sm flex-1">
-            <span className="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
-              <div className="rounded-full bg-gray-100 border p-1">
-                <svg
-                  stroke="none"
-                  fill="black"
-                  stroke-width="0"
-                  viewBox="0 0 16 16"
-                  height="20"
-                  width="20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"></path>
-                </svg>
-              </div>
-            </span>
-            <p className="leading-relaxed">
-              <span className="block font-bold text-gray-700">You </span>fewafef
-            </p>
-          </div>
-
-          <div className="flex gap-3 my-4 text-gray-600 text-sm flex-1">
-            <span className="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
-              <div className="rounded-full bg-gray-100 border p-1">
-                <svg
-                  stroke="none"
-                  fill="black"
-                  stroke-width="1.5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  height="20"
-                  width="20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
-                  ></path>
-                </svg>
-              </div>
-            </span>
-            <p className="leading-relaxed">
-              <span className="block font-bold text-gray-700">AI </span>Sorry, I
-              couldn't find any information in the documentation about that.
-              Expect answer to be less accurateI could not find the answer to
-              this in the verified sources.
-            </p>
-          </div>
+        <div className="flex items-center justify-between">
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="submit"
+            disabled={loadingState}
+          >
+            {loadingState ? "Loading" : "Envoyer"}
+          </button>
         </div>
-        <div className="flex items-center pt-0">
-          <form className="flex items-center justify-center w-full space-x-2">
-            <input
-              className="flex h-10 w-full rounded-md border border-[#e5e7eb] px-3 py-2 text-sm placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#9ca3af] disabled:cursor-not-allowed disabled:opacity-50 text-[#030712] focus-visible:ring-offset-2"
-              placeholder="Type your message"
-              value=""
-            />
-            <button className="inline-flex items-center justify-center rounded-md text-sm font-medium text-[#f9fafb] disabled:pointer-events-none disabled:opacity-50 bg-black hover:bg-[#111827E6] h-10 px-4 py-2">
-              Send
-            </button>
-          </form>
-        </div>
-      </div>
-    </>
+      </form>
+    </div>
+  );
+};
+
+const PresetQuestion: React.FC<MyPresetQuestionProps> = ({
+  handlePresetQuestion,
+}) => {
+  return (
+    <motion.div className="cursor-pointer space-y-1">
+      <h1
+        className="bg-zinc-900 inline-block text-gray-100
+       p-3 mr-1 rounded-md hover:tracking-wider transition-all"
+        onClick={handlePresetQuestion}
+      >
+        En quoi consiste votre expertise en intelligence artificielle (IA) ?
+      </h1>
+      <h1
+        className="bg-zinc-900 inline-block text-gray-100
+       p-3 rounded-md hover:tracking-wider transition-all"
+        onClick={handlePresetQuestion}
+      >
+        Combien de temps vous faut-il pour fournir un devis?
+      </h1>
+      <h1
+        className="bg-zinc-900 inline-block text-gray-100
+       p-3 rounded-md hover:tracking-wider transition-all"
+        onClick={handlePresetQuestion}
+      >
+        Quels sont vos modes de prestations?
+      </h1>
+    </motion.div>
   );
 };
 

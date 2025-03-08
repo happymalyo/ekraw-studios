@@ -9,72 +9,57 @@ import Image from "next/image";
 import useImageTheme from "@/hooks/use-image-theme";
 import { cn } from "@/lib/utils";
 import useScroll from "@/hooks/use-scroll";
-import { motion } from "framer-motion";
-import { servicesList } from "@/components/Navbar/NavList/ServicesList";
-
-const headerHeight = {
-  open: {
-    clipPath: "inset(0 0 0 0)",
-    paddingBottom: "100px",
-  },
-  closed: {
-    clipPath: "inset(0 0 200px 0)",
-  },
-};
 
 const Header = () => {
   const src: any = useImageTheme({
-    darkName: "/logo-dark-mode.svg",
-    lightName: "/logo-light-mode.svg",
+    darkName: "/dark-mode.png",
+    lightName: "/ekraw-light.jpeg",
   });
   const scrolled = useScroll(5);
   const containerRef = useRef(null);
-  const [isOpen, toggleOpen] = useState(false);
 
   return (
-    <motion.div
-      initial={false}
-      animate={isOpen ? "open" : "closed"}
+    <div
       ref={containerRef}
       className={cn(
         "sticky inset-x-0 top-0 z-30 w-full transition-all mt-[20px]",
         {
-          "bg-background/75 backdrop-blur-lg py-[20px]": scrolled,
+          "backdrop-blur-lg py-[10px]": scrolled,
         }
       )}
     >
-      <div className="flex w-full h-16 items-center max-w-6xl mx-auto p-6 justify-between sm:space-x-0">
+      <div className="flex w-full h-16 items-center max-w-7xl  mx-auto justify-between sm:space-x-0">
         <div>
-          <Image src={src} alt="SmartPredict logo" width={160} height={40} />
+          <Image
+            src={src}
+            className={cn("pt-5 pl-7 transition-all duration-300", {
+              "rounded-r-full pt-0 w-[90px]": scrolled, // Curves only the right side
+            })}
+            alt="Mëkan logo"
+            width={120}
+            height={40}
+          />
         </div>
         <div className="flex justify-end items-center space-x-4">
-          <Navbar toggleOpen={toggleOpen} />
-          <nav className="hidden lg:block flex items-center space-x-1">
+          <Navbar />
+          <nav className="hidden lg:flex items-center space-x-4">
             <Button
               asChild
-              className="dark:bg-secondary/20 dark:text-secondary-foreground"
+              className={cn(
+                "bg-primary text-primary-foreground hover:bg-[#d1254e] transition-all duration-300",
+                "dark:bg-primary dark:text-primary-foreground dark:hover:bg-[#d1254e]"
+              )}
             >
-              <Link href="/">New SmartProject</Link>
+              <Link href="/">New Project</Link>
             </Button>
+            <button className="text-foreground hover:text-primary transition-colors">
+              EN
+            </button>
+            <ThemeToggle className="text-foreground hover:text-primary" />
           </nav>
-          <button className="hidden lg:block">EN</button>
-          <ThemeToggle className="hidden lg:block" />
         </div>
       </div>
-      <motion.div
-        variants={headerHeight}
-        className="w-full absolute transition-all inset-x-0 top-[102px]w-full bg-background/85 backdrop-blur-lg flex flex-col items-start z-20"
-        onMouseLeave={() => toggleOpen((isOpen) => !isOpen)}
-      >
-        <div className="container max-w-6xl pl-96 pt-10 hidden lg:block">
-          {servicesList.map((service, index) => (
-            <div key={index} className="flex items-center gap-4">
-              <span className="text-dark-foreground">{service.label}</span>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
