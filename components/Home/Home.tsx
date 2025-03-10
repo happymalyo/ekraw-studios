@@ -32,7 +32,7 @@ export const Home = () => {
         <HeroSection />
         {/* <WhyChooseUs /> */}
         <ServicesSection />
-        <div className="flex w-full gap-0">
+        <div className="flex lg:flex-row flex-col w-full gap-0">
           <motion.div
             className="ml-auto"
             initial={{ x: -100 }}
@@ -42,11 +42,13 @@ export const Home = () => {
             <Image
               src={imgApp}
               style={{
-                maxWidth: "80%",
+                maxWidth: "100%",
                 height: "auto",
               }}
               className="drop-shadow-2xl"
               alt="Hero home bg"
+              layout="responsive"
+              objectFit="contain"
             />
           </motion.div>
           <Advantages />
